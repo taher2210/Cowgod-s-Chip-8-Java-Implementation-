@@ -9,6 +9,7 @@ public class Chip8 {
     int I;
     int opcode;
     int memory_start;
+    byte[][] display;
 
 
 
@@ -20,6 +21,7 @@ public class Chip8 {
         I = 0;
         opcode = 0;
         memory_start = 0x200;
+        display = new byte[32][64];
     }
 
     public void  loadRom() {
@@ -77,6 +79,7 @@ opcode = ((memory[pc] & 0xFF) << 8) | (memory[pc + 1] & 0xFF);
 pc += 2;
 }
 private void decode(){
+  
     /*
  * Useful masks for decoding CHIP-8 opcodes:
  *
@@ -92,6 +95,89 @@ private void decode(){
  * opcode & 0x000F -> Keep the last hex digit (N - 4-bit value)
  *                    Example: 0x6A0F -> 0x000F
  */
+switch (opcode & 0xF000) {
+
+    case 0x0000:
+        switch (opcode & 0x00FF) {
+
+            case 0x00E0:
+                // 00E0 - Clear Screen
+                for (int y = 0; y < 32; y++) {
+                    for (int x = 0; x < 64; x++) {
+                        display[y][x] = 0;
+                    }
+                }
+                break;
+
+            case 0x00EE:
+                // 00EE - Return from subroutine
+                // TODO: Implement when stack and subroutines are added.
+                break;
+        }
+        break;
+
+    case 0x1000:
+        // 1NNN - Jump
+        pc = opcode & 0x0FFF;
+        break;
+
+    case 0x6000:
+        // 6XNN - Set VX = NN
+        int x6 = (opcode & 0x0F00) >> 8;
+        V[x6] = (byte) (opcode & 0x00FF);
+        break;
+
+    case 0x7000:
+        // 7XNN - VX += NN
+        int x7 = (opcode & 0x0F00) >> 8;
+        V[x7] = (byte) (V[x7] + (opcode & 0x00FF));
+        break;
+
+    case 0xA000:
+        // ANNN - Set I = NNN
+        I = opcode & 0x0FFF;
+        break;
+
+    case 0xD000:
+                                    /*
+                                * DXYN - Draw Sprite
+                                *
+                                * TODO:
+                                *
+                                * 1. Extract X, Y and N from the opcode.
+                                *    - X = value stored in VX
+                                *    - Y = value stored in VY
+                                *    - N = sprite height
+                                *
+                                * 2. Wrap starting coordinates:
+                                *    - X %= 64
+                                *    - Y %= 32
+                                *
+                                * 3. Set VF = 0 (collision flag)
+                                *
+                                * 4. For each of the N sprite rows:
+                                *      - Read sprite byte from memory[I + row]
+                                *
+                                * 5. For each of the 8 bits in the sprite byte:
+                                *      - Check if the current sprite bit is 1.
+                                *      - If so, XOR it with the display pixel.
+                                *      - If a display pixel changes from 1 -> 0,
+                                *        set VF = 1.
+                                *      - Stop drawing if the right edge of the
+                                *        screen is reached.
+                                *
+                                * 6. Stop drawing if the bottom edge of the
+                                *    screen is reached.
+                                *
+                                * Notes:
+                                * - Sprite data is stored in memory starting at I.
+                                * - VX and VY contain the starting coordinates.
+                                * - Display size is 64x32.
+                                * - Drawing uses XOR.
+                                * - I, VX and VY are NOT modified.
+                                */
+        break;
+}
 
 }
 private void execute(){
