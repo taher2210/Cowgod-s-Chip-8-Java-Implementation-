@@ -10,6 +10,7 @@ public class Chip8 {
     int opcode;
     int memory_start;
     byte[][] display;
+    Display renderer;
 
 
 
@@ -22,6 +23,7 @@ public class Chip8 {
         opcode = 0;
         memory_start = 0x200;
         display = new byte[32][64];
+        renderer = new Display(display);
     }
 
     public void  loadRom() {
@@ -49,7 +51,8 @@ public class Chip8 {
 public void emulateCycle(){
     fetch();
     decode();
-    execute();
+    renderer.refresh();
+
 }
 private void fetch(){
         /*
@@ -77,6 +80,7 @@ private void fetch(){
  */
 opcode = ((memory[pc] & 0xFF) << 8) | (memory[pc + 1] & 0xFF);
 pc += 2;
+System.out.printf("PC=%03X OPCODE=%04X%n", pc - 2, opcode);
 }
 private void decode(){
   
@@ -138,50 +142,64 @@ switch (opcode & 0xF000) {
         I = opcode & 0x0FFF;
         break;
 
-    case 0xD000:
-                                    /*
-                                * DXYN - Draw Sprite
-                                *
-                                * TODO:
-                                *
-                                * 1. Extract X, Y and N from the opcode.
-                                *    - X = value stored in VX
-                                *    - Y = value stored in VY
-                                *    - N = sprite height
-                                *
-                                * 2. Wrap starting coordinates:
-                                *    - X %= 64
-                                *    - Y %= 32
-                                *
-                                * 3. Set VF = 0 (collision flag)
-                                *
-                                * 4. For each of the N sprite rows:
-                                *      - Read sprite byte from memory[I + row]
-                                *
-                                * 5. For each of the 8 bits in the sprite byte:
-                                *      - Check if the current sprite bit is 1.
-                                *      - If so, XOR it with the display pixel.
-                                *      - If a display pixel changes from 1 -> 0,
-                                *        set VF = 1.
-                                *      - Stop drawing if the right edge of the
-                                *        screen is reached.
-                                *
-                                * 6. Stop drawing if the bottom edge of the
-                                *    screen is reached.
-                                *
-                                * Notes:
-                                * - Sprite data is stored in memory starting at I.
-                                * - VX and VY contain the starting coordinates.
-                                * - Display size is 64x32.
-                                * - Drawing uses XOR.
-                                * - I, VX and VY are NOT modified.
-                                */
-        break;
+    case 0xD000: //draw display is made using ai assistance as the algorithm was beyond my comprehension
+    //This is the most involved instruction. It will draw an N pixels tall sprite f
+    // from the memory location that the I index register is holding to the screen, at the horizontal X coordinate in VX and the Y coordinate in VY.
+    //  All the pixels that are “on” in the sprite will flip the pixels on the screen that it is drawn to (from left to right, from most to least significant bit).
+    //  If any pixels on the screen were turned “off” by this, the VF flag register is set to 1. Otherwise, it’s set to 0.
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
+    int N = opcode & 0x000F;
+
+    int startx = V[x] & 0xFF;
+    int starty = V[y] & 0xFF;
+
+    startx %= 64;
+    starty %= 32;
+
+    V[0xF] = 0;
+
+    for (int i = 0; i < N; i++) {
+
+        int row = memory[I + i] & 0xFF;
+
+        for (int bit = 0; bit < 8; bit++) {
+
+            int mask = 0x80 >> bit;
+
+            if ((row & mask) != 0) {
+
+                int screenX = startx + bit;
+                int screenY = starty + i;
+
+                if (screenX < 64 && screenY < 32) {
+
+                    // Collision detection
+                    if (display[screenY][screenX] == 1) {
+                        V[0xF] = 1;
+                    }
+
+                    // XOR draw
+                    display[screenY][screenX] ^= 1;
+                }
+            }
+        }
+    }
+    break;
+
+
+
+
+
+        
+
+
+
+
+       
 }
 
 }
-private void execute(){
 
 }
 
-}
