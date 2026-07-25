@@ -1,0 +1,15 @@
+# Java bytecode
+*.class
+
+# Build directories
+bin/
+out/
+target/
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
